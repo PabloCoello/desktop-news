@@ -4,6 +4,7 @@ import json
 from nytAPI import NYTimesTopStoriesAPI
 from pathlib import Path
 from base64 import b64decode
+from datetime import datetime
 
 def get_news():
     # Obtener noticias
@@ -35,7 +36,7 @@ def generate_image(prompt):
         n=1,
         response_format="b64_json"
     )
-    filename=f"{prompt[:5]}-{response.created}"
+    filename=f"{datetime.today().date().isoformat()}-{response.created}"
     save_image(filename, response)
     convert_image(filename)
 
