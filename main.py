@@ -6,6 +6,8 @@ from base64 import b64decode
 from datetime import datetime
 import subprocess
 import os
+from typing import Awaitable
+import asyncio
 
 def get_news():
     # Obtener noticias
@@ -46,6 +48,11 @@ def generate_image(prompt, set_wallpaper=False):
         # Ejecutar el comando
         subprocess.run(comando, shell=True)
 
+async def get_prompt(prompts, news) -> Awaitable[str]:
+    completion = await asyn.chat.completions.create(model="gpt-4", messages=[{"role": "user", "content": prompts.get("summary") +news}])
+    return completion
+
+
 if __name__ == "__main__":
     
     with open("./conf/conf.json") as f:
@@ -58,6 +65,6 @@ if __name__ == "__main__":
         prompts = json.load(f)
 
     news = get_news()
-    completion = await asyn.chat.completions.create(model="gpt-4", messages=[{"role": "user", "content": prompts.get("summary") +news}])
+    completion = asyncio.run(get_prompt(prompts, news))
     prompt = completion.dict()['choices'][0]['message']["content"]
     generate_image(prompt, set_wallpaper=True)
