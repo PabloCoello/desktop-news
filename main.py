@@ -9,6 +9,8 @@ import os
 from typing import Awaitable
 import asyncio
 
+WD = os.path.dirname(os.path.abspath(__file__))
+
 def get_news():
     # Obtener noticias
     abstracts = nyt.get_top_abstracts()
@@ -44,7 +46,7 @@ def generate_image(prompt, set_wallpaper=False):
     convert_image(filename)
     if set_wallpaper:
         # Comando para cambiar el fondo de pantalla
-        comando = f"gsettings set org.gnome.desktop.background picture-uri file://{f'{os.getcwd()}/images/{filename}.png'}"
+        comando = f"gsettings set org.gnome.desktop.background picture-uri-dark file://{f'{WD}/images/{filename}.png'}"
         # Ejecutar el comando
         subprocess.run(comando, shell=True)
 
@@ -55,13 +57,13 @@ async def get_prompt(prompts, news) -> Awaitable[str]:
 
 if __name__ == "__main__":
     
-    with open("./conf/conf.json") as f:
+    with open(f"{WD}/conf/conf.json") as f:
         conf = json.load(f)
         client = OpenAI(api_key=conf.get("openai_api_key"))
         asyn = AsyncOpenAI(api_key=conf.get("openai_api_key"))
         nyt = NYTimesTopStoriesAPI(conf.get('nyt_api_key'))
 
-    with open("./conf/prompt.json") as f:
+    with open(f"{WD}/conf/prompt.json") as f:
         prompts = json.load(f)
 
     news = get_news()
