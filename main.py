@@ -8,6 +8,7 @@ import subprocess
 import os
 from typing import Awaitable
 import asyncio
+import argparse
 
 WD = os.path.dirname(os.path.abspath(__file__))
 
@@ -56,7 +57,11 @@ async def get_prompt(prompts, news) -> Awaitable[str]:
 
 
 if __name__ == "__main__":
-    
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--feeling', action="store", dest='feeling', default=None)
+    args = parser.parse_args()
+
     with open(f"{WD}/conf/conf.json") as f:
         conf = json.load(f)
         client = OpenAI(api_key=conf.get("openai_api_key"))
@@ -69,4 +74,5 @@ if __name__ == "__main__":
     news = get_news()
     completion = asyncio.run(get_prompt(prompts, news))
     prompt = completion.dict()['choices'][0]['message']["content"]
+    prompt = prompt + f" Add the feeling based on the following keyword to the image: {args.feeling}." if args.feeling else prompt
     generate_image(prompt, set_wallpaper=True)
