@@ -70,5 +70,6 @@ if __name__ == "__main__":
     news = get_news()
     completion = asyncio.run(get_prompt(prompts, news))
     prompt = completion.dict()['choices'][0]['message']["content"]
-    prompt = prompt + f" Add the feeling based on the following keyword to the image: {sys.argv[1]}." if len(sys.argv) > 1 else prompt
+    prompt = prompt + f" Create the image like everything is happening in the following environment/universe/scenario: {sys.argv[1]}." if len(sys.argv) > 1 else prompt
+    print(prompt)
     generate_image(prompt, set_wallpaper=True)
