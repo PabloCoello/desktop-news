@@ -21,15 +21,15 @@ def get_news():
     return texto_generado
 
 def convert_image(filename):
-    with open(f"./responses/{filename}", mode="r", encoding="utf-8") as file:
+    with open(f"{WD}/responses/{filename}", mode="r", encoding="utf-8") as file:
         response = json.load(file)
     image_data = b64decode(response)
-    image_file = f"./images/{filename}.png"
+    image_file = f"{WD}/images/{filename}.png"
     with open(image_file, mode="wb") as png:
         png.write(image_data)
 
 def save_image(filename, response):
-    with open(f"./responses/{filename}", mode="w", encoding="utf-8") as file:
+    with open(f"{WD}/responses/{filename}", mode="w", encoding="utf-8") as file:
         json.dump(response.data[0].b64_json, file)
 
 def generate_image(prompt, set_wallpaper=False):
