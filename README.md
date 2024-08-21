@@ -2,7 +2,9 @@
 
 El objetivo de este repositorio es generar una imagen con DALL-E a partir de un prompt generado con chatgpt4 a partir de los abstracts de las principales noticias mundiales obtenidos a partir del API del New York Times.
 
-Para poder ejecutar correctamente el script main.py es necesario introducir primero las api keys de openai y del api de New York Times en el ficher ./conf/conf.json.
+Además, esposible ambientar la imagen en algún escenario/universo/entorno mediante la ejecución del script pasando un argumento con el nombre del entorno que se desee ("star wars", "Mad max", "Marvel"...).
+
+Para poder ejecutar correctamente el script main.py es necesario introducir primero las api keys de openai y del api de New York Times en el fichero ./conf/conf.json.
 
 ## Automatizar wallpaper diario en Ubuntu
 
