@@ -6,11 +6,13 @@ import asyncio
 import subprocess
 import logging
 
-from desktop_news.nytAPI import NYTimesTopStoriesAPI
+# from desktop_news.nytAPI import NYTimesTopStoriesAPI
 from base64 import b64decode
 from datetime import datetime
 from typing import Awaitable
 from desktop_news.ConfFileManager import generate_conf_file_template
+from desktop_news.Register import REG_NAMESPACE
+import desktop_news.Updaters
 
 from openai import OpenAI
 from openai import AsyncOpenAI
@@ -37,22 +39,12 @@ parser.add_argument(
 args = parser.parse_args()
 
 
-def get_news(nyt):
-    # Obtener noticias
-    abstracts = nyt.get_top_abstracts()
-    # Generar texto adicional basado en los titulares
-    texto_generado = ""
-    for idx, abstract in enumerate(abstracts, start=1):
-        texto_generado += f"Noticia: {abstract}\n"
-    return texto_generado
-
-
 def convert_image(image_path, response_path, filename):
     with open(f"{response_path}/{filename}", mode="r", encoding="utf-8") as file:
         response = json.load(file)
     image_data = b64decode(response)
     image_file = f"{image_path}/{filename}.png"
-    with open(image_file, mode="wb") as png:
+    with open(image_file, mode="+wb") as png:
         png.write(image_data)
 
 
@@ -89,7 +81,6 @@ async def get_prompt(provider, prompts, news) -> Awaitable[str]:
 
 
 def main():
-
     if args.generateconf:
         generate_conf_file_template("/".join(args.config.split("/")[:-1]))
         sys.exit(0)
@@ -99,13 +90,13 @@ def main():
             conf = json.load(f)
             client = OpenAI(api_key=conf.get("openai_api_key"))
             asyn = AsyncOpenAI(api_key=conf.get("openai_api_key"))
-            nyt = NYTimesTopStoriesAPI(conf.get('nyt_api_key'))
+            nyt = REG_NAMESPACE["NYTimesTopStoriesAPI"]["instance"](conf.get('nyt_api_key'))
             prompts = conf.get("prompt")
     except FileNotFoundError:
         print("conf file not found, launch with --generate-conf to auto generate it on ~/.config/desktop-news/")
         sys.exit(1)
 
-    news = get_news(nyt)
+    news = nyt.update()
     completion = asyncio.run(get_prompt(asyn, prompts, news))
     prompt = completion.dict()['choices'][0]['message']["content"]
     prompt = prompt + \
