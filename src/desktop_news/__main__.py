@@ -6,13 +6,11 @@ import asyncio
 import subprocess
 import logging
 
-# from desktop_news.nytAPI import NYTimesTopStoriesAPI
 from base64 import b64decode
 from datetime import datetime
 from typing import Awaitable
 from desktop_news.ConfFileManager import generate_conf_file_template
-from desktop_news.Register import REG_NAMESPACE
-import desktop_news.Updaters
+from desktop_news.PromptBuilder import PromptBuilder
 
 from openai import OpenAI
 from openai import AsyncOpenAI
@@ -73,10 +71,10 @@ def generate_image(conf, client, prompt, set_wallpaper=False):
         subprocess.run(command, shell=True)
 
 
-async def get_prompt(provider, prompts, news) -> Awaitable[str]:
+async def get_prompt(provider, prompts, prompt) -> Awaitable[str]:
     completion = await provider.chat.completions.create(
         model="gpt-4",
-        messages=[{"role": "user", "content": prompts.get("summary") + news}])
+        messages=[{"role": "user", "content":  prompt}])
     return completion
 
 
@@ -90,17 +88,19 @@ def main():
             conf = json.load(f)
             client = OpenAI(api_key=conf.get("openai_api_key"))
             asyn = AsyncOpenAI(api_key=conf.get("openai_api_key"))
-            nyt = REG_NAMESPACE["NYTimesTopStoriesAPI"]["instance"](conf.get('nyt_api_key'))
             prompts = conf.get("prompt")
     except FileNotFoundError:
         print("conf file not found, launch with --generate-conf to auto generate it on ~/.config/desktop-news/")
         sys.exit(1)
 
-    news = nyt.update()
-    completion = asyncio.run(get_prompt(asyn, prompts, news))
+    builder = PromptBuilder(conf, args)
+
+    prompt_content = builder.build_prompt(exclude_tags=["literal"])
+
+    completion = asyncio.run(get_prompt(asyn, prompts, prompt_content))
     prompt = completion.dict()['choices'][0]['message']["content"]
-    prompt = prompt + \
-        f" Create the image like everything is happening in the following environment/universe/scenario: {args.scenario}."
+    prompt += builder.build_prompt(include_tags=["literal"])
+
     print(prompt)
     generate_image(conf, client, prompt, set_wallpaper=True)
 

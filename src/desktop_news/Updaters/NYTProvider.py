@@ -5,8 +5,8 @@ from desktop_news.IUpdater import IUpdater
 
 @Register("Update prompt with latest news from New York Times news", tags=["news", "NYT"])
 class NYTimesTopStoriesAPI(IUpdater):
-    def __init__(self, api_key):
-        self.api_key = api_key
+    def __init__(self, conf, args):
+        self.api_key = conf["nyt_api_key"]
         self.base_url = 'https://api.nytimes.com/svc/topstories/v2/home.json'
 
     def _make_request(self, params):
@@ -40,4 +40,3 @@ class NYTimesTopStoriesAPI(IUpdater):
         for idx, abstract in enumerate(abstracts, start=1):
             generated += f"New: {abstract}\n"
         return generated
-
