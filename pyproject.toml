@@ -1,0 +1,23 @@
+[project]
+name = "desktop_news"
+version = "0.0.1"
+authors = [
+  { name="PabloCoello", email="pcoello91@gmail.com" },
+  { name="dcoello-dev", email="dcpulido91@gmail.com" },
+]
+description = "Generate wallpapers from latest global situation"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: Other/Propietary License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "openai",
+    "requests",
+    "pip-system-certs"
+]
+
+[project.scripts]
+desktop-news = "desktop_news.__main__:main"
