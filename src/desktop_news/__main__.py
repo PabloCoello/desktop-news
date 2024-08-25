@@ -1,13 +1,16 @@
 import os
+import sys
 import json
 import argparse
 import asyncio
 import subprocess
+import logging
 
 from desktop_news.nytAPI import NYTimesTopStoriesAPI
 from base64 import b64decode
 from datetime import datetime
 from typing import Awaitable
+from desktop_news.ConfFileManager import generate_conf_file_template
 
 from openai import OpenAI
 from openai import AsyncOpenAI
@@ -18,13 +21,18 @@ parser = argparse.ArgumentParser(
 
 parser.add_argument(
     '-c', '--config',
-    default=os.path.expanduser('~') + ".config/desktop-news/conf.json",
+    default=os.path.expanduser('~') + "/.config/desktop-news/conf.json",
     help="configuration file")
 
 parser.add_argument(
     '-s', '--scenario',
-    required=True,
+    default="daily news",
     help="base scenario of generation")
+
+parser.add_argument(
+    '--generateconf',
+    action="store_true",
+    help="generate configuration file template")
 
 args = parser.parse_args()
 
@@ -81,12 +89,21 @@ async def get_prompt(provider, prompts, news) -> Awaitable[str]:
 
 
 def main():
-    with open(args.config, "r") as f:
-        conf = json.load(f)
-        client = OpenAI(api_key=conf.get("openai_api_key"))
-        asyn = AsyncOpenAI(api_key=conf.get("openai_api_key"))
-        nyt = NYTimesTopStoriesAPI(conf.get('nyt_api_key'))
-        prompts = conf.get("prompt")
+
+    if args.generateconf:
+        generate_conf_file_template("/".join(args.config.split("/")[:-1]))
+        sys.exit(0)
+
+    try:
+        with open(args.config, "r") as f:
+            conf = json.load(f)
+            client = OpenAI(api_key=conf.get("openai_api_key"))
+            asyn = AsyncOpenAI(api_key=conf.get("openai_api_key"))
+            nyt = NYTimesTopStoriesAPI(conf.get('nyt_api_key'))
+            prompts = conf.get("prompt")
+    except FileNotFoundError:
+        print("conf file not found, launch with --generate-conf to auto generate it on ~/.config/desktop-news/")
+        sys.exit(1)
 
     news = get_news(nyt)
     completion = asyncio.run(get_prompt(asyn, prompts, news))
