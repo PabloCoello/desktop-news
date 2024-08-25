@@ -17,7 +17,8 @@ dependencies = [
     "openai",
     "requests",
     "pip-system-certs",
-    "pytest"
+    "pytest",
+    "rich"
 ]
 
 [project.scripts]

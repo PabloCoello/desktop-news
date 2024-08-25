@@ -7,6 +7,7 @@ import logging
 
 from base64 import b64decode
 from datetime import datetime
+from rich.console import Console
 from desktop_news.ConfFileManager import generate_conf_file_template
 from desktop_news.PromptBuilder import PromptBuilder
 from desktop_news.Preprocessors.OpenAIPreprocessor import OpenAIPreprocessor
@@ -31,11 +32,15 @@ parser.add_argument(
     action="store_true",
     help="generate configuration file template")
 
+parser.add_argument(
+    '--silent',
+    action="store_true",
+    help="silent output")
+
 args = parser.parse_args()
 
 
 def save_image(conf, response):
-    # b = json.loads(response["b64"])
     image_data = b64decode(response["b64"])
     filename = f"{datetime.today().date().isoformat()}-{response['created']}.png"
     image_file = f"{conf['image_path']}/{filename}"
@@ -44,7 +49,27 @@ def save_image(conf, response):
         print(image_file)
 
 
+class FakeContext:
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        pass
+
+
+class FakeConsole:
+    def __init__(self):
+        pass
+
+    def status(self, msg):
+        return FakeContext()
+
+    def log(self, msg):
+        pass
+
+
 def main():
+    console = FakeConsole() if args.silent else Console()
     if args.generateconf:
         generate_conf_file_template("/".join(args.config.split("/")[:-1]))
         sys.exit(0)
@@ -53,18 +78,24 @@ def main():
             conf = json.load(f)
             prompts = conf.get("prompt")
     except FileNotFoundError:
-        print("conf file not found, launch with --generate-conf to auto generate it on ~/.config/desktop-news/")
+        console.log(
+            "conf file not found, launch with --generate-conf to auto generate it on ~/.config/desktop-news/")
         sys.exit(1)
 
-    builder = PromptBuilder(conf, args)
-    preprocess = OpenAIPreprocessor(conf, args)
-    generator = OpenAIGenerator(conf, args)
+    with console.status("[bold green]Generating...") as status:
+        builder = PromptBuilder(conf, args)
+        preprocess = OpenAIPreprocessor(conf, args)
+        generator = OpenAIGenerator(conf, args)
 
-    prompt_content = builder.build_prompt(exclude_tags=["literal"])
-    prompt = preprocess.preprocess(prompt_content)
-    prompt += builder.build_prompt(include_tags=["literal"])
-    res = generator.generate(prompt)
-    save_image(conf, res)
+        console.log("building prompt")
+        prompt_content = builder.build_prompt(exclude_tags=["literal"])
+        console.log("preprocess prompt")
+        prompt = preprocess.preprocess(prompt_content)
+        prompt += builder.build_prompt(include_tags=["literal"])
+        console.log("generate image")
+        res = generator.generate(prompt)
+        console.log("save image")
+        save_image(conf, res)
 
 
 if __name__ == "__main__":
