@@ -1,7 +1,10 @@
 import requests
+from desktop_news.Register import Register
+from desktop_news.IUpdater import IUpdater
 
 
-class NYTimesTopStoriesAPI:
+@Register("Update prompt with latest news from New York Times news", tags=["news", "NYT"])
+class NYTimesTopStoriesAPI(IUpdater):
     def __init__(self, api_key):
         self.api_key = api_key
         self.base_url = 'https://api.nytimes.com/svc/topstories/v2/home.json'
@@ -31,27 +34,10 @@ class NYTimesTopStoriesAPI:
             return abstracts
         return None
 
+    def update(self) -> str:
+        abstracts = self.get_top_abstracts()
+        generated = ""
+        for idx, abstract in enumerate(abstracts, start=1):
+            generated += f"New: {abstract}\n"
+        return generated
 
-# Ejemplo de uso
-if __name__ == "__main__":
-    # Reemplaza 'TU_CLAVE_DE_API' con tu clave de API de New York Times
-    api_key = 'TU_CLAVE_DE_API'
-
-    # Crea una instancia de la clase
-    nytimes_api = NYTimesTopStoriesAPI(api_key)
-
-    # Obtiene los titulares de las top stories
-    top_stories = nytimes_api.get_top_stories()
-
-    # Imprime los titulares
-    if top_stories:
-        for idx, headline in enumerate(top_stories, start=1):
-            print(f"{idx}. {headline}")
-
-    # Obtiene los resúmenes de las top stories
-    top_abstracts = nytimes_api.get_top_abstracts()
-
-    # Imprime los resúmenes
-    if top_abstracts:
-        for idx, abstract in enumerate(top_abstracts, start=1):
-            print(f"{idx}. {abstract}")
