@@ -43,7 +43,7 @@ args = parser.parse_args()
 def save_image(conf, response):
     image_data = b64decode(response["b64"])
     filename = f"{datetime.today().date().isoformat()}-{response['created']}.png"
-    image_file = f"{conf['image_path']}/{filename}"
+    image_file = os.path.expanduser(f"{conf['image_path']}/{filename}")
     with open(image_file, mode="+wb") as png:
         png.write(image_data)
         print(image_file)
