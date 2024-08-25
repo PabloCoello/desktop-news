@@ -1,4 +1,5 @@
 import os
+import sys
 import json
 import argparse
 import asyncio
@@ -64,21 +65,17 @@ def generate_image(conf, client, prompt, set_wallpaper=False):
     )
     filename = f"{datetime.today().date().isoformat()}-{response.created}"
     save_image(conf["response_path"],  filename, response)
-    convert_image(conf["image_path"], conf["response_path"], filename)
+    convert_image(conf["image_path"],conf["response_path"], filename)
     if set_wallpaper:
         # Command to change wallpaper
         # TODO(dcoello): remove this or change sink actions to generic.
-        path = conf["image_path"]
-        command = f"gsettings set org.gnome.desktop.background picture-uri-dark file://{f'{path}/{filename}.png'}"
+        command = f"gsettings set org.gnome.desktop.background picture-uri-dark file://{f'{conf["image_path"]}/images/{filename}.png'}"
         subprocess.run(command, shell=True)
 
 
 async def get_prompt(provider, prompts, news) -> Awaitable[str]:
-    completion = await provider.chat.completions.create(
-        model="gpt-4",
-        messages=[{"role": "user", "content": prompts.get("summary") + news}])
+    completion = await provider.chat.completions.create(model="gpt-4", messages=[{"role": "user", "content": prompts.get("summary") + news}])
     return completion
-
 
 def main():
     with open(args.config, "r") as f:
@@ -92,10 +89,10 @@ def main():
     completion = asyncio.run(get_prompt(asyn, prompts, news))
     prompt = completion.dict()['choices'][0]['message']["content"]
     prompt = prompt + \
-        f" Create the image like everything is happening in the following environment/universe/scenario: {args.scenario}."
+        f" Create the image like everything is happening in the following environment/universe/scenario: {args.scenario}." if len(
+            sys.argv) > 1 else prompt
     print(prompt)
     generate_image(conf, client, prompt, set_wallpaper=True)
-
 
 if __name__ == "__main__":
     main()

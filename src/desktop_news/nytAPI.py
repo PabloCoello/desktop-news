@@ -1,6 +1,5 @@
 import requests
 
-
 class NYTimesTopStoriesAPI:
     def __init__(self, api_key):
         self.api_key = api_key
@@ -26,11 +25,9 @@ class NYTimesTopStoriesAPI:
         params = {'api-key': self.api_key}
         data = self._make_request(params)
         if data:
-            abstracts = [article.get('abstract', 'N/A')
-                         for article in data['results']]
+            abstracts = [article.get('abstract', 'N/A') for article in data['results']]
             return abstracts
         return None
-
 
 # Ejemplo de uso
 if __name__ == "__main__":
