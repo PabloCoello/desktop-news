@@ -18,15 +18,16 @@ pip install build
 python3 -m build
 
 # install generated whl package
-pip install dist/version.whl
+sudo pip install dist/version.whl
 ```
 
 If you are working in development and you are not changing pyproject.toml version do not forget to force reinstall:
 
 ```bash
 # install generated whl package
-pip install dist/version.whl --force-reinstall
+sudo pip install dist/version.whl --force-reinstall
 ```
+Run sudo install to be able to run the command in the bash shell.
 
 Once installed generate conf file using `--generateconf` arg:
 
