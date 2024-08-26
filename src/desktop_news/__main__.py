@@ -2,16 +2,16 @@ import os
 import sys
 import json
 import argparse
-import asyncio
 import subprocess
+import logging
 
-from desktop_news.nytAPI import NYTimesTopStoriesAPI
 from base64 import b64decode
 from datetime import datetime
-from typing import Awaitable
-
-from openai import OpenAI
-from openai import AsyncOpenAI
+from rich.console import Console
+from desktop_news.ConfFileManager import generate_conf_file_template
+from desktop_news.PromptBuilder import PromptBuilder
+from desktop_news.Preprocessors.OpenAIPreprocessor import OpenAIPreprocessor
+from desktop_news.Generators.OpenAIGenerator import OpenAIGenerator
 
 
 parser = argparse.ArgumentParser(
@@ -19,80 +19,84 @@ parser = argparse.ArgumentParser(
 
 parser.add_argument(
     '-c', '--config',
-    default=os.path.expanduser('~') + ".config/desktop-news/conf.json",
+    default=os.path.expanduser('~') + "/.config/desktop-news/conf.json",
     help="configuration file")
 
 parser.add_argument(
     '-s', '--scenario',
-    required=True,
+    default="daily news",
     help="base scenario of generation")
+
+parser.add_argument(
+    '--generateconf',
+    action="store_true",
+    help="generate configuration file template")
+
+parser.add_argument(
+    '--silent',
+    action="store_true",
+    help="silent output")
 
 args = parser.parse_args()
 
 
-def get_news(nyt):
-    # Obtener noticias
-    abstracts = nyt.get_top_abstracts()
-    # Generar texto adicional basado en los titulares
-    texto_generado = ""
-    for idx, abstract in enumerate(abstracts, start=1):
-        texto_generado += f"Noticia: {abstract}\n"
-    return texto_generado
-
-
-def convert_image(image_path, response_path, filename):
-    with open(f"{response_path}/{filename}", mode="r", encoding="utf-8") as file:
-        response = json.load(file)
-    image_data = b64decode(response)
-    image_file = f"{image_path}/{filename}.png"
-    with open(image_file, mode="wb") as png:
+def save_image(conf, response):
+    image_data = b64decode(response["b64"])
+    filename = f"{datetime.today().date().isoformat()}-{response['created']}.png"
+    image_file = os.path.expanduser(f"{conf['image_path']}/{filename}")
+    with open(image_file, mode="+wb") as png:
         png.write(image_data)
+        print(image_file)
 
 
-def save_image(response_path, filename, response):
-    with open(f"{response_path}/{filename}", mode="w", encoding="utf-8") as file:
-        json.dump(response.data[0].b64_json, file)
+class FakeContext:
+    def __enter__(self):
+        pass
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        pass
 
 
-def generate_image(conf, client, prompt, set_wallpaper=False):
-    response = client.images.generate(
-        model="dall-e-3",
-        prompt=prompt,
-        size='1792x1024',
-        quality="standard",
-        n=1,
-        response_format="b64_json"
-    )
-    filename = f"{datetime.today().date().isoformat()}-{response.created}"
-    save_image(conf["response_path"],  filename, response)
-    convert_image(conf["image_path"],conf["response_path"], filename)
-    if set_wallpaper:
-        # Command to change wallpaper
-        # TODO(dcoello): remove this or change sink actions to generic.
-        command = f"gsettings set org.gnome.desktop.background picture-uri-dark file://{f'{conf["image_path"]}/images/{filename}.png'}"
-        subprocess.run(command, shell=True)
+class FakeConsole:
+    def __init__(self):
+        pass
 
+    def status(self, msg):
+        return FakeContext()
 
-async def get_prompt(provider, prompts, news) -> Awaitable[str]:
-    completion = await provider.chat.completions.create(model="gpt-4", messages=[{"role": "user", "content": prompts.get("summary") + news}])
-    return completion
+    def log(self, msg):
+        pass
+
 
 def main():
-    with open(args.config, "r") as f:
-        conf = json.load(f)
-        client = OpenAI(api_key=conf.get("openai_api_key"))
-        asyn = AsyncOpenAI(api_key=conf.get("openai_api_key"))
-        nyt = NYTimesTopStoriesAPI(conf.get('nyt_api_key'))
-        prompts = conf.get("prompt")
+    console = FakeConsole() if args.silent else Console()
+    if args.generateconf:
+        generate_conf_file_template("/".join(args.config.split("/")[:-1]))
+        sys.exit(0)
+    try:
+        with open(args.config, "r") as f:
+            conf = json.load(f)
+            prompts = conf.get("prompt")
+    except FileNotFoundError:
+        console.log(
+            "conf file not found, launch with --generate-conf to auto generate it on ~/.config/desktop-news/")
+        sys.exit(1)
 
-    news = get_news(nyt)
-    completion = asyncio.run(get_prompt(asyn, prompts, news))
-    prompt = completion.dict()['choices'][0]['message']["content"]
-    prompt = prompt + \
-        f" Create the image like everything is happening in the following environment/universe/scenario: {args.scenario}." if len(
-            sys.argv) > 1 else prompt
-    print(prompt)
-    generate_image(conf, client, prompt, set_wallpaper=True)
+    with console.status("[bold green]Generating...") as status:
+        builder = PromptBuilder(conf, args)
+        preprocess = OpenAIPreprocessor(conf, args)
+        generator = OpenAIGenerator(conf, args)
+
+        console.log("building prompt")
+        prompt_content = builder.build_prompt(exclude_tags=["literal"])
+        console.log("preprocess prompt")
+        prompt = preprocess.preprocess(prompt_content)
+        prompt += builder.build_prompt(include_tags=["literal"])
+        console.log("generate image")
+        res = generator.generate(prompt)
+        console.log("save image")
+        save_image(conf, res)
+
 
 if __name__ == "__main__":
     main()

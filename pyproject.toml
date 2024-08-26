@@ -16,8 +16,17 @@ classifiers = [
 dependencies = [
     "openai",
     "requests",
-    "pip-system-certs"
+    "pip-system-certs",
+    "pytest",
+    "rich"
 ]
 
 [project.scripts]
 desktop-news = "desktop_news.__main__:main"
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q"
+testpaths = [
+    "tests",
+]
